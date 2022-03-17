@@ -41,7 +41,6 @@ class _MyHomePageState extends State<MyHomePage> {
       future: _initialization,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-
           return Text('${snapshot.error}');
         }
 

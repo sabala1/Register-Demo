@@ -1,6 +1,7 @@
 import 'dart:io';
-
+import 'package:path/path.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:form_field_validator/form_field_validator.dart';
 import 'package:register_demo/models/profile.dart';
@@ -16,11 +17,14 @@ class RegistrationPage extends StatefulWidget {
 class _RegistrationPageState extends State<RegistrationPage> {
   final CollectionReference _profilesCollection =
       FirebaseFirestore.instance.collection('profilesCollection');
+
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
   final _formKey = GlobalKey<FormState>();
   final Profile _profile = Profile();
 
   final ImagePicker _picker = ImagePicker();
-   File? _selectedImageFile ;
+  File? _selectedImageFile;
 
   getImage() async {
     final selectedFile = await _picker.getImage(source: ImageSource.camera);
@@ -91,7 +95,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           getImage();
                         },
                         child: _selectedImageFile != null
-                        // Take camera
+                            // Take camera
                             ? Image.file(_selectedImageFile!)
                             //not yet take camera
                             : Container(
@@ -118,13 +122,48 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           print(
                               '${_profile.firstName} ${_profile.lastName} ${_profile.email}');
 
+                          showDialog(
+                              context: context,
+                              barrierDismissible:
+                                  false, //user can not cancel uploading
+                              builder: (BuildContext context) {
+                                return Dialog(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(15),
+                                    child: Row(children: const [
+                                      CircularProgressIndicator(),
+                                      SizedBox(
+                                        width: 10,
+                                      ),
+                                      Text('กำลังบันทึกข้อมูล')
+                                    ]),
+                                  ),
+                                );
+                              });
+
+                          //upload image to storage
+                          if (_selectedImageFile != null) {
+                            String fileName =
+                                basename(_selectedImageFile!.path);
+                            _storage
+                                .ref()
+                                .child('images/register/$fileName')
+                                .putFile(_selectedImageFile!);
+                          }
+
                           await _profilesCollection.add({
                             'first_name': _profile.firstName,
                             'lastName_name': _profile.lastName,
-                            'email': _profile.email
+                            'email': _profile.email,
+                            'imageRef': basename(_selectedImageFile!.path)
                           });
 
+                          Navigator.pop(context);
+
                           _formKey.currentState!.reset();
+                          setState(() {
+                            _selectedImageFile = null;
+                          });
                         }
                       },
                       child: const Text('ลงทะเบียน'),
